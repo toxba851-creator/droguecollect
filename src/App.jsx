@@ -498,7 +498,7 @@ function AuthPage({ setPage, setUser, t }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const handle = () => {
-    if (isAdmin && adminCode === "admin123") {
+    if (isAdmin && adminCode === "Malation12@") {
       setUser({ pseudo: "Admin", role: "admin" });
       setPage("admin");
     } else if (pseudo.trim()) {
