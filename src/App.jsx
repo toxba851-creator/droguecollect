@@ -871,31 +871,231 @@ function AdminPage({ t }) {
     .slice(-6)
     .map(([month, submissions]) => ({ month, submissions }));
 
-  // Export CSV
-  const exportCSV = () => {
-    const headers = ["Date", "Tranche d'âge", "Région", "Genre", "Substances", "Fréquence", "Mode", "Raisons", "Effets", "Durée", "Lieu", "Accès soins", "Arrêter"];
-    const rows = submissions.map(s => [
-      new Date(s.created_at).toLocaleDateString("fr-FR"),
-      s.age_range || "",
-      s.region || "",
-      s.gender || "",
-      (s.substances || []).join(" | "),
-      s.frequency || "",
-      (s.consumption_mode || []).join(" | "),
-      (s.reasons || []).join(" | "),
-      (s.effects || []).join(" | "),
-      s.duration || "",
-      s.place || "",
-      s.health_access || "",
-      s.stop_intention || "",
-    ]);
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `droguecollect_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
+  // ── Export PDF complet ────────────────────────────────────────────────────
+  const exportPDF = async () => {
+    // Charger jsPDF et autoTable dynamiquement
+    const { jsPDF } = await import("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm");
+    const autoTable = (await import("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/+esm")).default;
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+
+    // ── Palette couleurs ──────────────────────────────────────────────────
+    const BLUE      = [14, 165, 233];
+    const DARK_BLUE = [3, 105, 161];
+    const LIGHT     = [240, 249, 255];
+    const GREY      = [100, 116, 139];
+    const WHITE     = [255, 255, 255];
+    const DARK      = [15, 23, 42];
+
+    // ── En-tête ───────────────────────────────────────────────────────────
+    doc.setFillColor(...BLUE);
+    doc.rect(0, 0, pageW, 38, "F");
+    doc.setFillColor(...DARK_BLUE);
+    doc.rect(0, 32, pageW, 6, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(...WHITE);
+    doc.text("DrogueCollect", 14, 16);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(224, 242, 254);
+    doc.text("Rapport de données — Collecte anonyme au Sénégal", 14, 26);
+    doc.text(`Généré le ${dateStr}`, pageW - 14, 26, { align: "right" });
+
+    let y = 48;
+
+    // ── Résumé statistique ────────────────────────────────────────────────
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...DARK);
+    doc.text("Résumé statistique", 14, y);
+    y += 6;
+
+    doc.setDrawColor(...BLUE);
+    doc.setLineWidth(0.8);
+    doc.line(14, y, pageW - 14, y);
+    y += 8;
+
+    // 4 cartes stats côte à côte
+    const cardW = (pageW - 28 - 9) / 4;
+    const statsCards = [
+      { label: "Total soumissions", value: String(total), color: BLUE },
+      { label: "Ce mois-ci",        value: String(thisMonth), color: [139, 92, 246] },
+      { label: "Régions",           value: String(uniqueRegions.length), color: [16, 185, 129] },
+      { label: "Substances",        value: String(uniqueSubstances.length), color: [245, 158, 11] },
+    ];
+    statsCards.forEach((card, i) => {
+      const x = 14 + i * (cardW + 3);
+      doc.setFillColor(...LIGHT);
+      doc.roundedRect(x, y, cardW, 22, 3, 3, "F");
+      doc.setFillColor(...card.color);
+      doc.roundedRect(x, y, 4, 22, 2, 2, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(...card.color);
+      doc.text(card.value, x + cardW / 2 + 2, y + 11, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(...GREY);
+      doc.text(card.label, x + cardW / 2 + 2, y + 17, { align: "center" });
+    });
+    y += 30;
+
+    // ── Répartition par tranche d'âge ─────────────────────────────────────
+    if (ageData.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...DARK);
+      doc.text("Répartition par tranche d'âge", 14, y);
+      y += 5;
+      const ageTotal = ageData.reduce((a, b) => a + b.value, 0);
+      ageData.forEach(row => {
+        const pct = ageTotal > 0 ? (row.value / ageTotal) : 0;
+        const barW = (pageW - 80) * pct;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...GREY);
+        doc.text(row.name, 14, y + 4);
+        doc.setFillColor(224, 242, 254);
+        doc.roundedRect(60, y, pageW - 80, 6, 2, 2, "F");
+        doc.setFillColor(...BLUE);
+        if (barW > 0) doc.roundedRect(60, y, barW, 6, 2, 2, "F");
+        doc.setTextColor(...DARK);
+        doc.text(`${row.value} (${(pct * 100).toFixed(0)}%)`, pageW - 14, y + 4, { align: "right" });
+        y += 9;
+      });
+      y += 4;
+    }
+
+    // ── Substances les plus consommées ────────────────────────────────────
+    if (substanceData.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...DARK);
+      doc.text("Substances les plus consommées", 14, y);
+      y += 5;
+      const subTotal = substanceData.reduce((a, b) => a + b.value, 0);
+      substanceData.forEach((row, i) => {
+        const pct = subTotal > 0 ? (row.value / subTotal) : 0;
+        const barW = (pageW - 80) * pct;
+        const color = [[14,165,233],[56,189,248],[2,132,199],[7,89,133],[3,105,161],[125,211,252]][i % 6];
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...GREY);
+        doc.text(row.name, 14, y + 4);
+        doc.setFillColor(224, 242, 254);
+        doc.roundedRect(60, y, pageW - 80, 6, 2, 2, "F");
+        doc.setFillColor(...color);
+        if (barW > 0) doc.roundedRect(60, y, barW, 6, 2, 2, "F");
+        doc.setTextColor(...DARK);
+        doc.text(`${row.value} (${(pct * 100).toFixed(0)}%)`, pageW - 14, y + 4, { align: "right" });
+        y += 9;
+      });
+      y += 4;
+    }
+
+    // ── Régions ───────────────────────────────────────────────────────────
+    if (regionData.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...DARK);
+      doc.text("Répartition par région", 14, y);
+      y += 5;
+      const regTotal = regionData.reduce((a, b) => a + b.count, 0);
+      regionData.forEach(row => {
+        const pct = regTotal > 0 ? (row.count / regTotal) : 0;
+        const barW = (pageW - 80) * pct;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...GREY);
+        doc.text(row.region, 14, y + 4);
+        doc.setFillColor(224, 242, 254);
+        doc.roundedRect(60, y, pageW - 80, 6, 2, 2, "F");
+        doc.setFillColor(...DARK_BLUE);
+        if (barW > 0) doc.roundedRect(60, y, barW, 6, 2, 2, "F");
+        doc.setTextColor(...DARK);
+        doc.text(`${row.count} (${(pct * 100).toFixed(0)}%)`, pageW - 14, y + 4, { align: "right" });
+        y += 9;
+      });
+      y += 4;
+    }
+
+    // ── Nouvelle page : tableau complet ───────────────────────────────────
+    doc.addPage();
+
+    // Mini en-tête page 2
+    doc.setFillColor(...BLUE);
+    doc.rect(0, 0, pageW, 14, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...WHITE);
+    doc.text("DrogueCollect — Données détaillées", 14, 9);
+    doc.text(`Page 2 / 2`, pageW - 14, 9, { align: "right" });
+
+    y = 22;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...DARK);
+    doc.text(`Toutes les soumissions (${total})`, 14, y);
+    y += 6;
+
+    // Tableau complet avec autoTable
+    autoTable(doc, {
+      startY: y,
+      head: [["Date", "Âge", "Région", "Substances", "Fréquence", "Mode", "Durée", "Veut arrêter"]],
+      body: submissions.map(s => [
+        new Date(s.created_at).toLocaleDateString("fr-FR"),
+        s.age_range || "—",
+        s.region || "—",
+        (s.substances || []).join(", ") || "—",
+        s.frequency || "—",
+        (s.consumption_mode || []).join(", ") || "—",
+        s.duration || "—",
+        s.stop_intention || "—",
+      ]),
+      styles: {
+        fontSize: 7, cellPadding: 2.5,
+        textColor: DARK, lineColor: [226, 232, 240], lineWidth: 0.2,
+      },
+      headStyles: {
+        fillColor: BLUE, textColor: WHITE,
+        fontStyle: "bold", fontSize: 7.5,
+      },
+      alternateRowStyles: { fillColor: LIGHT },
+      columnStyles: {
+        0: { cellWidth: 18 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 22 },
+        6: { cellWidth: 18 },
+        7: { cellWidth: 28 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    // ── Pied de page ──────────────────────────────────────────────────────
+    const pages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i);
+      const ph = doc.internal.pageSize.getHeight();
+      doc.setFillColor(248, 250, 252);
+      doc.rect(0, ph - 10, pageW, 10, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(...GREY);
+      doc.text("DrogueCollect — Données anonymes et confidentielles — Sénégal", 14, ph - 4);
+      doc.text(`${dateStr}`, pageW - 14, ph - 4, { align: "right" });
+    }
+
+    // ── Téléchargement ────────────────────────────────────────────────────
+    doc.save(`droguecollect_rapport_${now.toISOString().slice(0,10)}.pdf`);
   };
 
   if (loading) return (
@@ -1063,7 +1263,7 @@ function AdminPage({ t }) {
               </table>
               {total > 20 && (
                 <p style={{ textAlign: "center", color: "#94a3b8", fontSize: 13, marginTop: 12 }}>
-                  Affichage des 20 dernières sur {total} soumissions — exportez le CSV pour tout voir
+                  Affichage des 20 dernières sur {total} soumissions — exportez le PDF pour tout voir
                 </p>
               )}
             </div>
@@ -1071,15 +1271,23 @@ function AdminPage({ t }) {
         </>
       )}
 
-      {/* Bouton export CSV */}
-      <div style={{ textAlign: "right" }}>
-        <button onClick={exportCSV} disabled={total === 0} style={{
-          padding: "11px 22px", borderRadius: 12, border: "none",
+      {/* Bouton export PDF */}
+      <div style={{ textAlign: "right", marginTop: 16 }}>
+        <button onClick={exportPDF} disabled={total === 0} style={{
+          padding: "13px 28px", borderRadius: 14, border: "none",
           background: total === 0 ? "#e2e8f0" : "linear-gradient(135deg,#38bdf8,#0369a1)",
           color: total === 0 ? "#94a3b8" : "white",
           fontWeight: 700, cursor: total === 0 ? "not-allowed" : "pointer",
-          boxShadow: total === 0 ? "none" : "0 4px 16px rgba(14,165,233,0.3)", fontSize: 14,
-        }}>⬇️ {t.exportCSV}</button>
+          boxShadow: total === 0 ? "none" : "0 6px 20px rgba(14,165,233,0.35)",
+          fontSize: 14, display: "inline-flex", alignItems: "center", gap: 8,
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Exporter le rapport PDF
+        </button>
+        {total === 0 && <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>Aucune donnée à exporter pour l'instant.</p>}
       </div>
     </div>
   );
