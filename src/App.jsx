@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from './supabaseClient';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 // ─── TRANSLATIONS ────────────────────────────────────────────────────────────
@@ -871,7 +872,32 @@ export default function DrogueCollect() {
   const [history, setHistory] = useState(mockHistory);
   const t = T[lang];
 
-  const addHistory = (answers) => {
+  const addHistory = async (answers) => {
+    // Envoyer les données à Supabase
+    const { error } = await supabase
+      .from("submissions")
+      .insert({
+        age_range: answers.age,
+        region: answers.region,
+        gender: answers.gender,
+        substances: answers.substances || [],
+        frequency: answers.frequency,
+        consumption_mode: answers.mode || [],
+        reasons: answers.reasons || [],
+        effects: answers.effects || [],
+        duration: answers.duration,
+        place: answers.place,
+        health_access: answers.access,
+        stop_intention: answers.stop,
+      });
+
+    if (error) {
+      console.error("Erreur envoi données:", error);
+    } else {
+      console.log("Données envoyées avec succès !");
+    }
+
+    // Mettre à jour l'affichage local
     setHistory(prev => [{
       ...answers,
       date: new Date().toLocaleDateString("fr-FR"),
