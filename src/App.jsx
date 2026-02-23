@@ -453,7 +453,7 @@ function HomePage({ setPage, t }) {
         <p style={{ fontSize: "clamp(1rem,2vw,1.15rem)", color: "#64748b", lineHeight: 1.7, marginBottom: 10 }}>{t.subtitle}</p>
       </div>
 
-      <div className={`fade-up ${vis ? "vis" : ""} mobile-col`} style={{ transitionDelay: "0.25s", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 28, marginBottom: 16, width: "100%", maxWidth: 400 }}>
+      <div className={`fade-up ${vis ? "vis" : ""}`} className="mobile-col" style={{ transitionDelay: "0.25s", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 28, marginBottom: 16, width: "100%", maxWidth: 400 }}>
         <button onClick={() => setPage("auth")} className="liquid-btn" style={{
           padding: "14px 36px", borderRadius: 16, border: "none", cursor: "pointer",
           background: "linear-gradient(135deg,#38bdf8,#0369a1)",
@@ -471,7 +471,7 @@ function HomePage({ setPage, t }) {
         <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>🔒 {t.privacyNote}</p>
       </div>
 
-      <div className={`fade-up ${vis ? "vis" : ""} mobile-grid-2`} style={{ transitionDelay: "0.55s", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 36, width: "100%", maxWidth: 700 }}>
+      <div className={`fade-up ${vis ? "vis" : ""}`} className="mobile-grid-2" style={{ transitionDelay: "0.55s", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 36, width: "100%", maxWidth: 700 }}>
         {[
           { icon: "🔒", label: "100% Anonyme", sub: "Aucune donnée identifiable" },
           { icon: "📊", label: "Impact Réel", sub: "Contribuez à la recherche" },
@@ -871,231 +871,141 @@ function AdminPage({ t }) {
     .slice(-6)
     .map(([month, submissions]) => ({ month, submissions }));
 
-  // ── Export PDF complet ────────────────────────────────────────────────────
-  const exportPDF = async () => {
-    // Charger jsPDF et autoTable dynamiquement
-    const { jsPDF } = await import("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm");
-    const autoTable = (await import("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/+esm")).default;
-
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
+  // ── Export PDF via impression navigateur ─────────────────────────────────
+  const exportPDF = () => {
     const now = new Date();
     const dateStr = now.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+    const ageTotal = ageData.reduce((a, b) => a + b.value, 0);
+    const subTotal = substanceData.reduce((a, b) => a + b.value, 0);
+    const regTotal = regionData.reduce((a, b) => a + b.count, 0);
 
-    // ── Palette couleurs ──────────────────────────────────────────────────
-    const BLUE      = [14, 165, 233];
-    const DARK_BLUE = [3, 105, 161];
-    const LIGHT     = [240, 249, 255];
-    const GREY      = [100, 116, 139];
-    const WHITE     = [255, 255, 255];
-    const DARK      = [15, 23, 42];
+    const barHTML = (items, keyName, valName, total) => items.map((row, i) => {
+      const pct = total > 0 ? Math.round((row[valName] / total) * 100) : 0;
+      const colors = ["#0ea5e9","#38bdf8","#0284c7","#0369a1","#075985","#7dd3fc"];
+      return `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="width:130px;font-size:12px;color:#475569;flex-shrink:0">${row[keyName]}</span>
+          <div style="flex:1;background:#e0f2fe;border-radius:99px;height:10px;overflow:hidden">
+            <div style="width:${pct}%;background:${colors[i%6]};height:100%;border-radius:99px"></div>
+          </div>
+          <span style="font-size:12px;font-weight:700;color:#0369a1;width:60px;text-align:right">${row[valName]} (${pct}%)</span>
+        </div>`;
+    }).join("");
 
-    // ── En-tête ───────────────────────────────────────────────────────────
-    doc.setFillColor(...BLUE);
-    doc.rect(0, 0, pageW, 38, "F");
-    doc.setFillColor(...DARK_BLUE);
-    doc.rect(0, 32, pageW, 6, "F");
+    const rowsHTML = submissions.map((s, i) => `
+      <tr style="background:${i % 2 === 0 ? "#f0f9ff" : "white"}">
+        <td>${new Date(s.created_at).toLocaleDateString("fr-FR")}</td>
+        <td>${s.age_range || "—"}</td>
+        <td>${s.region || "—"}</td>
+        <td>${(s.substances || []).join(", ") || "—"}</td>
+        <td>${s.frequency || "—"}</td>
+        <td>${(s.consumption_mode || []).join(", ") || "—"}</td>
+        <td>${s.duration || "—"}</td>
+        <td>${s.stop_intention || "—"}</td>
+      </tr>`).join("");
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(...WHITE);
-    doc.text("DrogueCollect", 14, 16);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(224, 242, 254);
-    doc.text("Rapport de données — Collecte anonyme au Sénégal", 14, 26);
-    doc.text(`Généré le ${dateStr}`, pageW - 14, 26, { align: "right" });
-
-    let y = 48;
-
-    // ── Résumé statistique ────────────────────────────────────────────────
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.setTextColor(...DARK);
-    doc.text("Résumé statistique", 14, y);
-    y += 6;
-
-    doc.setDrawColor(...BLUE);
-    doc.setLineWidth(0.8);
-    doc.line(14, y, pageW - 14, y);
-    y += 8;
-
-    // 4 cartes stats côte à côte
-    const cardW = (pageW - 28 - 9) / 4;
-    const statsCards = [
-      { label: "Total soumissions", value: String(total), color: BLUE },
-      { label: "Ce mois-ci",        value: String(thisMonth), color: [139, 92, 246] },
-      { label: "Régions",           value: String(uniqueRegions.length), color: [16, 185, 129] },
-      { label: "Substances",        value: String(uniqueSubstances.length), color: [245, 158, 11] },
-    ];
-    statsCards.forEach((card, i) => {
-      const x = 14 + i * (cardW + 3);
-      doc.setFillColor(...LIGHT);
-      doc.roundedRect(x, y, cardW, 22, 3, 3, "F");
-      doc.setFillColor(...card.color);
-      doc.roundedRect(x, y, 4, 22, 2, 2, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.setTextColor(...card.color);
-      doc.text(card.value, x + cardW / 2 + 2, y + 11, { align: "center" });
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.setTextColor(...GREY);
-      doc.text(card.label, x + cardW / 2 + 2, y + 17, { align: "center" });
-    });
-    y += 30;
-
-    // ── Répartition par tranche d'âge ─────────────────────────────────────
-    if (ageData.length > 0) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(...DARK);
-      doc.text("Répartition par tranche d'âge", 14, y);
-      y += 5;
-      const ageTotal = ageData.reduce((a, b) => a + b.value, 0);
-      ageData.forEach(row => {
-        const pct = ageTotal > 0 ? (row.value / ageTotal) : 0;
-        const barW = (pageW - 80) * pct;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.setTextColor(...GREY);
-        doc.text(row.name, 14, y + 4);
-        doc.setFillColor(224, 242, 254);
-        doc.roundedRect(60, y, pageW - 80, 6, 2, 2, "F");
-        doc.setFillColor(...BLUE);
-        if (barW > 0) doc.roundedRect(60, y, barW, 6, 2, 2, "F");
-        doc.setTextColor(...DARK);
-        doc.text(`${row.value} (${(pct * 100).toFixed(0)}%)`, pageW - 14, y + 4, { align: "right" });
-        y += 9;
-      });
-      y += 4;
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <title>DrogueCollect — Rapport ${dateStr}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Sora', sans-serif; }
+    body { background: white; color: #0f172a; }
+    .header { background: linear-gradient(135deg,#0ea5e9,#0369a1); color: white; padding: 28px 32px 20px; }
+    .header h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+    .header p { font-size: 13px; opacity: 0.85; }
+    .header .date { float: right; font-size: 12px; opacity: 0.8; margin-top: -36px; }
+    .content { padding: 28px 32px; }
+    .section-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #e0f2fe; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 8px; }
+    .stat-card { background: #f0f9ff; border-radius: 14px; padding: 16px 12px; text-align: center; border-left: 5px solid #0ea5e9; }
+    .stat-card.purple { border-left-color: #8b5cf6; }
+    .stat-card.green  { border-left-color: #10b981; }
+    .stat-card.orange { border-left-color: #f59e0b; }
+    .stat-card .val { font-size: 30px; font-weight: 800; color: #0ea5e9; }
+    .stat-card.purple .val { color: #8b5cf6; }
+    .stat-card.green  .val { color: #10b981; }
+    .stat-card.orange .val { color: #f59e0b; }
+    .stat-card .lbl { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { background: #0ea5e9; color: white; padding: 9px 8px; text-align: left; font-weight: 700; }
+    td { padding: 8px; color: #475569; border-bottom: 1px solid #f0f9ff; }
+    .footer { margin-top: 32px; padding: 14px 32px; background: #f8fafc; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e0f2fe; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none; }
     }
+  </style>
+</head>
+<body>
 
-    // ── Substances les plus consommées ────────────────────────────────────
-    if (substanceData.length > 0) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(...DARK);
-      doc.text("Substances les plus consommées", 14, y);
-      y += 5;
-      const subTotal = substanceData.reduce((a, b) => a + b.value, 0);
-      substanceData.forEach((row, i) => {
-        const pct = subTotal > 0 ? (row.value / subTotal) : 0;
-        const barW = (pageW - 80) * pct;
-        const color = [[14,165,233],[56,189,248],[2,132,199],[7,89,133],[3,105,161],[125,211,252]][i % 6];
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.setTextColor(...GREY);
-        doc.text(row.name, 14, y + 4);
-        doc.setFillColor(224, 242, 254);
-        doc.roundedRect(60, y, pageW - 80, 6, 2, 2, "F");
-        doc.setFillColor(...color);
-        if (barW > 0) doc.roundedRect(60, y, barW, 6, 2, 2, "F");
-        doc.setTextColor(...DARK);
-        doc.text(`${row.value} (${(pct * 100).toFixed(0)}%)`, pageW - 14, y + 4, { align: "right" });
-        y += 9;
-      });
-      y += 4;
-    }
+  <div class="header">
+    <h1>🔵 DrogueCollect</h1>
+    <p>Rapport de données — Collecte anonyme au Sénégal</p>
+    <div class="date">Généré le ${dateStr}</div>
+  </div>
 
-    // ── Régions ───────────────────────────────────────────────────────────
-    if (regionData.length > 0) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(...DARK);
-      doc.text("Répartition par région", 14, y);
-      y += 5;
-      const regTotal = regionData.reduce((a, b) => a + b.count, 0);
-      regionData.forEach(row => {
-        const pct = regTotal > 0 ? (row.count / regTotal) : 0;
-        const barW = (pageW - 80) * pct;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.setTextColor(...GREY);
-        doc.text(row.region, 14, y + 4);
-        doc.setFillColor(224, 242, 254);
-        doc.roundedRect(60, y, pageW - 80, 6, 2, 2, "F");
-        doc.setFillColor(...DARK_BLUE);
-        if (barW > 0) doc.roundedRect(60, y, barW, 6, 2, 2, "F");
-        doc.setTextColor(...DARK);
-        doc.text(`${row.count} (${(pct * 100).toFixed(0)}%)`, pageW - 14, y + 4, { align: "right" });
-        y += 9;
-      });
-      y += 4;
-    }
+  <div class="content">
 
-    // ── Nouvelle page : tableau complet ───────────────────────────────────
-    doc.addPage();
+    <div class="section-title">📊 Résumé statistique</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="val">${total}</div><div class="lbl">Total soumissions</div></div>
+      <div class="stat-card purple"><div class="val">${thisMonth}</div><div class="lbl">Ce mois-ci</div></div>
+      <div class="stat-card green"><div class="val">${uniqueRegions.length}</div><div class="lbl">Régions couvertes</div></div>
+      <div class="stat-card orange"><div class="val">${uniqueSubstances.length}</div><div class="lbl">Substances répertoriées</div></div>
+    </div>
 
-    // Mini en-tête page 2
-    doc.setFillColor(...BLUE);
-    doc.rect(0, 0, pageW, 14, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...WHITE);
-    doc.text("DrogueCollect — Données détaillées", 14, 9);
-    doc.text(`Page 2 / 2`, pageW - 14, 9, { align: "right" });
+    ${ageData.length > 0 ? `
+    <div class="section-title">👥 Répartition par tranche d'âge</div>
+    ${barHTML(ageData, "name", "value", ageTotal)}` : ""}
 
-    y = 22;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(...DARK);
-    doc.text(`Toutes les soumissions (${total})`, 14, y);
-    y += 6;
+    ${substanceData.length > 0 ? `
+    <div class="section-title">🧪 Substances les plus consommées</div>
+    ${barHTML(substanceData, "name", "value", subTotal)}` : ""}
 
-    // Tableau complet avec autoTable
-    autoTable(doc, {
-      startY: y,
-      head: [["Date", "Âge", "Région", "Substances", "Fréquence", "Mode", "Durée", "Veut arrêter"]],
-      body: submissions.map(s => [
-        new Date(s.created_at).toLocaleDateString("fr-FR"),
-        s.age_range || "—",
-        s.region || "—",
-        (s.substances || []).join(", ") || "—",
-        s.frequency || "—",
-        (s.consumption_mode || []).join(", ") || "—",
-        s.duration || "—",
-        s.stop_intention || "—",
-      ]),
-      styles: {
-        fontSize: 7, cellPadding: 2.5,
-        textColor: DARK, lineColor: [226, 232, 240], lineWidth: 0.2,
-      },
-      headStyles: {
-        fillColor: BLUE, textColor: WHITE,
-        fontStyle: "bold", fontSize: 7.5,
-      },
-      alternateRowStyles: { fillColor: LIGHT },
-      columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 40 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 22 },
-        6: { cellWidth: 18 },
-        7: { cellWidth: 28 },
-      },
-      margin: { left: 14, right: 14 },
-    });
+    ${regionData.length > 0 ? `
+    <div class="section-title">🗺️ Répartition par région</div>
+    ${barHTML(regionData, "region", "count", regTotal)}` : ""}
 
-    // ── Pied de page ──────────────────────────────────────────────────────
-    const pages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pages; i++) {
-      doc.setPage(i);
-      const ph = doc.internal.pageSize.getHeight();
-      doc.setFillColor(248, 250, 252);
-      doc.rect(0, ph - 10, pageW, 10, "F");
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.setTextColor(...GREY);
-      doc.text("DrogueCollect — Données anonymes et confidentielles — Sénégal", 14, ph - 4);
-      doc.text(`${dateStr}`, pageW - 14, ph - 4, { align: "right" });
-    }
+    <div class="section-title">📋 Toutes les soumissions (${total})</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Tranche d'âge</th><th>Région</th><th>Substances</th>
+          <th>Fréquence</th><th>Mode</th><th>Durée</th><th>Veut arrêter</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHTML}</tbody>
+    </table>
 
-    // ── Téléchargement ────────────────────────────────────────────────────
-    doc.save(`droguecollect_rapport_${now.toISOString().slice(0,10)}.pdf`);
+  </div>
+
+  <div class="footer">
+    DrogueCollect — Données anonymes et confidentielles — Sénégal — ${dateStr}
+  </div>
+
+  <div class="no-print" style="text-align:center;padding:20px;background:#f0f9ff">
+    <p style="font-size:14px;color:#0369a1;margin-bottom:12px;font-weight:600">
+      ✅ Cliquez sur le bouton ci-dessous pour sauvegarder en PDF
+    </p>
+    <button onclick="window.print()" style="padding:12px 28px;background:linear-gradient(135deg,#38bdf8,#0369a1);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">
+      🖨️ Sauvegarder en PDF
+    </button>
+  </div>
+
+  <script>
+    // Impression automatique après chargement
+    window.onload = () => setTimeout(() => window.print(), 800);
+  <\/script>
+</body>
+</html>`;
+
+    // Ouvrir dans un nouvel onglet
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
   };
 
   if (loading) return (
