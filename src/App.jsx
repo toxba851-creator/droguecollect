@@ -498,7 +498,7 @@ function AuthPage({ setPage, setUser, t }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const handle = () => {
-    if (isAdmin && adminCode === "Malation12@") {
+    if (isAdmin && adminCode === "admin123") {
       setUser({ pseudo: "Admin", role: "admin" });
       setPage("admin");
     } else if (pseudo.trim()) {
@@ -1206,18 +1206,29 @@ function AdminPage({ t }) {
 // ─── ROOT APP ─────────────────────────────────────────────────────────────────
 export default function DrogueCollect() {
   const [lang, setLang] = useState("fr");
-  const [page, setPage] = useState("home");
+
+  const [page, setPage] = useState(() => {
+    return localStorage.getItem("droguecollect_page") || "home";
+  });
+
   const [user, setUser] = useState(() => {
-  try {
     const saved = localStorage.getItem("droguecollect_user");
     return saved ? JSON.parse(saved) : null;
-  } catch { return null; }
-});
+  });
+
   const [history, setHistory] = useState([]);
+
+  // Sauvegarder l'utilisateur dans le navigateur
   useEffect(() => {
-  if (user) localStorage.setItem("droguecollect_user", JSON.stringify(user));
-  else localStorage.removeItem("droguecollect_user");
-}, [user]);
+    if (user) localStorage.setItem("droguecollect_user", JSON.stringify(user));
+    else localStorage.removeItem("droguecollect_user");
+  }, [user]);
+
+  // Sauvegarder la page active dans le navigateur
+  useEffect(() => {
+    localStorage.setItem("droguecollect_page", page);
+  }, [page]);
+
   const t = T[lang];
 
   const addHistory = async (answers) => {
