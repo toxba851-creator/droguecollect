@@ -247,9 +247,9 @@ function ProgressBar({ current, total }) {
 }
 
 // ─── GLASS CARD ──────────────────────────────────────────────────────────────
-function GlassCard({ children, style = {}, onClick }) {
+function GlassCard({ children, style = {}, onClick, className = "" }) {
   return (
-    <div onClick={onClick} style={{
+    <div onClick={onClick} className={`glass-card ${className}`} style={{
       background: "rgba(255,255,255,0.72)",
       backdropFilter: "blur(20px)",
       WebkitBackdropFilter: "blur(20px)",
@@ -300,52 +300,110 @@ function Nav({ page, setPage, user, setUser, lang, setLang, t }) {
   if (user?.role === "admin") navItems.push({ key: "admin", label: t.dashboard, icon: "🔒" });
 
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      borderBottom: "1px solid rgba(14,165,233,0.15)",
-      boxShadow: "0 2px 20px rgba(14,165,233,0.08)",
-      padding: "0 20px", height: 64,
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setPage("home")}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#38bdf8,#0ea5e9)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(14,165,233,0.35)" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="white" /></svg>
+    <>
+      <style>{`
+        .desktop-nav { display: flex !important; }
+        .hamburger-btns { display: none !important; }
+        .bottom-nav { display: none !important; }
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .hamburger-btns { display: flex !important; }
+          .bottom-nav { display: flex !important; }
+        }
+      `}</style>
+
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        background: "rgba(255,255,255,0.92)", backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(14,165,233,0.15)",
+        boxShadow: "0 2px 20px rgba(14,165,233,0.08)",
+        padding: "0 16px", height: 60,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setPage("home")}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#38bdf8,#0ea5e9)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(14,165,233,0.35)", flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="white" /></svg>
+          </div>
+          <span style={{ fontWeight: 800, fontSize: 16, color: "#0ea5e9", letterSpacing: "-0.5px" }}>{t.appName}</span>
         </div>
-        <span style={{ fontWeight: 800, fontSize: 16, color: "#0ea5e9", letterSpacing: "-0.5px" }}>{t.appName}</span>
-      </div>
-      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+
+        {/* Desktop: liens + langue + login */}
+        <div className="desktop-nav" style={{ gap: 4, alignItems: "center" }}>
+          {navItems.map(item => (
+            <button key={item.key} onClick={() => setPage(item.key)} style={{
+              padding: "6px 12px", borderRadius: 10, border: "none", cursor: "pointer",
+              background: page === item.key ? "linear-gradient(135deg,#e0f2fe,#bfdbfe)" : "transparent",
+              color: page === item.key ? "#0369a1" : "#64748b",
+              fontWeight: page === item.key ? 700 : 500, fontSize: 13, transition: "all 0.2s",
+            }}>{item.label}</button>
+          ))}
+          <button onClick={() => setLang(lang === "fr" ? "wo" : "fr")} style={{
+            padding: "6px 12px", borderRadius: 10, border: "2px solid #e0f2fe",
+            background: "white", color: "#0369a1", fontWeight: 700, fontSize: 12, cursor: "pointer",
+          }}>{t.lang}</button>
+          {user ? (
+            <button onClick={() => { setUser(null); setPage("home"); }} style={{
+              padding: "6px 12px", borderRadius: 10, border: "none",
+              background: "#fff1f2", color: "#e11d48", fontWeight: 600, fontSize: 13, cursor: "pointer",
+            }}>{t.logout}</button>
+          ) : (
+            <button onClick={() => setPage("auth")} style={{
+              padding: "6px 16px", borderRadius: 10, border: "none",
+              background: "linear-gradient(135deg,#38bdf8,#0ea5e9)",
+              color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(14,165,233,0.3)",
+            }}>{t.login}</button>
+          )}
+        </div>
+
+        {/* Mobile: bouton langue + connexion */}
+        <div className="hamburger-btns" style={{ alignItems: "center", gap: 8 }}>
+          <button onClick={() => setLang(lang === "fr" ? "wo" : "fr")} style={{
+            padding: "5px 10px", borderRadius: 8, border: "2px solid #e0f2fe",
+            background: "white", color: "#0369a1", fontWeight: 700, fontSize: 11, cursor: "pointer",
+          }}>{t.lang}</button>
+          {user ? (
+            <button onClick={() => { setUser(null); setPage("home"); }} style={{
+              padding: "5px 10px", borderRadius: 8, border: "none",
+              background: "#fff1f2", color: "#e11d48", fontWeight: 600, fontSize: 11, cursor: "pointer",
+            }}>{t.logout}</button>
+          ) : (
+            <button onClick={() => setPage("auth")} style={{
+              padding: "5px 12px", borderRadius: 8, border: "none",
+              background: "linear-gradient(135deg,#38bdf8,#0ea5e9)",
+              color: "white", fontWeight: 700, fontSize: 11, cursor: "pointer",
+            }}>{t.login}</button>
+          )}
+        </div>
+      </nav>
+
+      {/* ── Barre de navigation en bas — mobile uniquement ── */}
+      <div className="bottom-nav" style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: "rgba(255,255,255,0.97)", backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderTop: "1px solid rgba(14,165,233,0.15)",
+        boxShadow: "0 -4px 20px rgba(14,165,233,0.1)",
+        height: 68, alignItems: "center", justifyContent: "space-around",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}>
         {navItems.map(item => (
           <button key={item.key} onClick={() => setPage(item.key)} style={{
-            padding: "6px 12px", borderRadius: 10, border: "none", cursor: "pointer",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+            padding: "6px 8px", borderRadius: 12, border: "none", cursor: "pointer",
             background: page === item.key ? "linear-gradient(135deg,#e0f2fe,#bfdbfe)" : "transparent",
-            color: page === item.key ? "#0369a1" : "#64748b",
-            fontWeight: page === item.key ? 700 : 500, fontSize: 13,
-            transition: "all 0.2s",
+            color: page === item.key ? "#0369a1" : "#94a3b8",
+            fontWeight: page === item.key ? 700 : 500,
+            transition: "all 0.2s", minWidth: 52, flex: 1,
           }}>
-            <span style={{ display: "none" }}>{item.icon} </span>{item.label}
+            <span style={{ fontSize: 22 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>{item.label}</span>
           </button>
         ))}
-        <button onClick={() => setLang(lang === "fr" ? "wo" : "fr")} style={{
-          padding: "6px 12px", borderRadius: 10, border: "2px solid #e0f2fe",
-          background: "white", color: "#0369a1", fontWeight: 700, fontSize: 12, cursor: "pointer",
-        }}>{t.lang}</button>
-        {user ? (
-          <button onClick={() => { setUser(null); setPage("home"); }} style={{
-            padding: "6px 12px", borderRadius: 10, border: "none",
-            background: "#fff1f2", color: "#e11d48", fontWeight: 600, fontSize: 13, cursor: "pointer",
-          }}>{t.logout}</button>
-        ) : (
-          <button onClick={() => setPage("auth")} style={{
-            padding: "6px 16px", borderRadius: 10, border: "none",
-            background: "linear-gradient(135deg,#38bdf8,#0ea5e9)",
-            color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(14,165,233,0.3)",
-          }}>{t.login}</button>
-        )}
       </div>
-    </nav>
+    </>
   );
 }
 
@@ -354,7 +412,7 @@ function HomePage({ setPage, t }) {
   const [vis, setVis] = useState(false);
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "80px 20px 40px" }}>
+    <div className="mobile-pad" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "80px 20px 40px" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Inter:wght@400;500;600&display=swap');
         * { font-family: 'Sora', sans-serif; box-sizing: border-box; }
@@ -370,6 +428,19 @@ function HomePage({ setPage, t }) {
         .liquid-btn:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 12px 30px rgba(14,165,233,0.45) !important; }
         .stat-card { transition: all 0.3s; }
         .stat-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(14,165,233,0.15) !important; }
+        /* ── RESPONSIVE MOBILE ── */
+        @media (max-width: 768px) {
+          .mobile-pad { padding: 75px 14px 90px !important; }
+          .mobile-card { padding: 18px 14px !important; border-radius: 18px !important; }
+          .mobile-grid-1 { grid-template-columns: 1fr !important; }
+          .mobile-grid-2 { grid-template-columns: 1fr 1fr !important; }
+          .mobile-text-sm { font-size: 13px !important; }
+          .mobile-hide { display: none !important; }
+          .mobile-full { width: 100% !important; }
+          .mobile-col { flex-direction: column !important; }
+          .mobile-table { font-size: 11px !important; }
+          .mobile-table th, .mobile-table td { padding: 7px 6px !important; }
+        }
       `}</style>
 
       <div className={`fade-up ${vis ? "vis" : ""}`} style={{ textAlign: "center", maxWidth: 600, transitionDelay: "0.1s" }}>
@@ -382,16 +453,16 @@ function HomePage({ setPage, t }) {
         <p style={{ fontSize: "clamp(1rem,2vw,1.15rem)", color: "#64748b", lineHeight: 1.7, marginBottom: 10 }}>{t.subtitle}</p>
       </div>
 
-      <div className={`fade-up ${vis ? "vis" : ""}`} style={{ transitionDelay: "0.25s", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 36, marginBottom: 20 }}>
+      <div className={`fade-up ${vis ? "vis" : ""}`} className="mobile-col" style={{ transitionDelay: "0.25s", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 28, marginBottom: 16, width: "100%", maxWidth: 400 }}>
         <button onClick={() => setPage("auth")} className="liquid-btn" style={{
           padding: "14px 36px", borderRadius: 16, border: "none", cursor: "pointer",
           background: "linear-gradient(135deg,#38bdf8,#0369a1)",
-          color: "white", fontWeight: 700, fontSize: 16,
+          color: "white", fontWeight: 700, fontSize: 16, width: "100%",
           boxShadow: "0 8px 24px rgba(14,165,233,0.35)",
         }}>{t.start}</button>
         <button onClick={() => setPage("questionnaire")} className="liquid-btn" style={{
           padding: "14px 28px", borderRadius: 16, border: "2px solid #bfdbfe",
-          background: "rgba(255,255,255,0.85)", color: "#0369a1", fontWeight: 600, fontSize: 15, cursor: "pointer",
+          background: "rgba(255,255,255,0.85)", color: "#0369a1", fontWeight: 600, fontSize: 15, cursor: "pointer", width: "100%",
           boxShadow: "0 4px 16px rgba(14,165,233,0.1)",
         }}>{t.guestMode}</button>
       </div>
@@ -400,7 +471,7 @@ function HomePage({ setPage, t }) {
         <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>🔒 {t.privacyNote}</p>
       </div>
 
-      <div className={`fade-up ${vis ? "vis" : ""}`} style={{ transitionDelay: "0.55s", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 16, marginTop: 48, width: "100%", maxWidth: 700 }}>
+      <div className={`fade-up ${vis ? "vis" : ""}`} className="mobile-grid-2" style={{ transitionDelay: "0.55s", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 36, width: "100%", maxWidth: 700 }}>
         {[
           { icon: "🔒", label: "100% Anonyme", sub: "Aucune donnée identifiable" },
           { icon: "📊", label: "Impact Réel", sub: "Contribuez à la recherche" },
@@ -437,7 +508,7 @@ function AuthPage({ setPage, setUser, t }) {
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "80px 20px 40px" }}>
+    <div className="mobile-pad" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "80px 20px 40px" }}>
       <GlassCard style={{ width: "100%", maxWidth: 420 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg,#38bdf8,#0369a1)", margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -567,7 +638,7 @@ function QuestionnairePage({ setPage, t, addHistory }) {
   const canNext = cur.optional || (isMulti ? (selected && selected.length > 0) : !!selected);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "80px 20px 40px" }}>
+    <div className="mobile-pad" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "80px 20px 40px" }}>
       <div style={{ width: "100%", maxWidth: 560 }}>
         <ProgressBar current={step + 1} total={total} />
         <GlassCard>
@@ -608,7 +679,7 @@ function QuestionnairePage({ setPage, t, addHistory }) {
 // ─── HISTORY PAGE ─────────────────────────────────────────────────────────────
 function HistoryPage({ t, history }) {
   return (
-    <div style={{ padding: "90px 20px 40px", maxWidth: 700, margin: "0 auto" }}>
+    <div className="mobile-pad" style={{ padding: "90px 20px 40px", maxWidth: 700, margin: "0 auto" }}>
       <h1 style={{ fontWeight: 800, fontSize: 26, color: "#0f172a", marginBottom: 6 }}>{t.history}</h1>
       <p style={{ color: "#94a3b8", marginBottom: 28 }}>Suivi de vos soumissions anonymes</p>
       {history.length === 0 ? (
@@ -662,7 +733,7 @@ function ResourcesPage({ t }) {
   const [filterRegion, setFilterRegion] = useState("all");
   const filtered = filterRegion === "all" ? centers : centers.filter(c => c.region === filterRegion);
   return (
-    <div style={{ padding: "90px 20px 40px", maxWidth: 800, margin: "0 auto" }}>
+    <div className="mobile-pad" style={{ padding: "90px 20px 40px", maxWidth: 800, margin: "0 auto" }}>
       <h1 style={{ fontWeight: 800, fontSize: 26, color: "#0f172a", marginBottom: 6 }}>{t.centerTitle}</h1>
       <p style={{ color: "#94a3b8", marginBottom: 24 }}>{t.centerSub}</p>
 
@@ -838,14 +909,14 @@ function AdminPage({ t }) {
   );
 
   return (
-    <div style={{ padding: "90px 20px 40px", maxWidth: 1000, margin: "0 auto" }}>
+    <div className="mobile-pad" style={{ padding: "90px 20px 40px", maxWidth: 1000, margin: "0 auto" }}>
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontWeight: 800, fontSize: 26, color: "#0f172a", marginBottom: 6 }}>{t.adminTitle}</h1>
         <p style={{ color: "#94a3b8" }}>{t.adminSub}</p>
       </div>
 
       {/* Statistiques globales */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 16, marginBottom: 28 }}>
+      <div className="mobile-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
         {[
           { label: t.totalSubmissions, value: total, icon: "📋", color: "#0ea5e9" },
           { label: t.thisMonth, value: thisMonth, icon: "📅", color: "#8b5cf6" },
@@ -944,7 +1015,7 @@ function AdminPage({ t }) {
               📋 Dernières soumissions ({total})
             </h3>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <table className="mobile-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid #e0f2fe" }}>
                     {["Date", "Tranche d'âge", "Région", "Substances", "Fréquence", "Veut arrêter"].map(h => (
@@ -1054,7 +1125,13 @@ export default function DrogueCollect() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 40%,#dbeafe 100%)", position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 40%,#dbeafe 100%)", position: "relative", WebkitTextSizeAdjust: "100%" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .glass-card { border-radius: 18px !important; padding: 18px 16px !important; }
+          body { -webkit-text-size-adjust: 100%; }
+        }
+      `}</style>
       <LiquidBlobs />
       <div style={{ position: "relative", zIndex: 1 }}>
         <Nav page={page} setPage={setPage} user={user} setUser={setUser} lang={lang} setLang={setLang} t={t} />
