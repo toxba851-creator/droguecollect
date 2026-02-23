@@ -1207,8 +1207,17 @@ function AdminPage({ t }) {
 export default function DrogueCollect() {
   const [lang, setLang] = useState("fr");
   const [page, setPage] = useState("home");
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+  try {
+    const saved = localStorage.getItem("droguecollect_user");
+    return saved ? JSON.parse(saved) : null;
+  } catch { return null; }
+});
   const [history, setHistory] = useState([]);
+  useEffect(() => {
+  if (user) localStorage.setItem("droguecollect_user", JSON.stringify(user));
+  else localStorage.removeItem("droguecollect_user");
+}, [user]);
   const t = T[lang];
 
   const addHistory = async (answers) => {
