@@ -498,7 +498,7 @@ function AuthPage({ setPage, setUser, t }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const handle = () => {
-    if (isAdmin && adminCode===import.meta.env.VITE_ADMIN_CODE) {
+    if (isAdmin && adminCode === "admin123") {
       setUser({ pseudo: "Admin", role: "admin" });
       setPage("admin");
     } else if (pseudo.trim()) {
@@ -657,6 +657,11 @@ function QuestionnairePage({ setPage, t, addHistory }) {
               background: "transparent", color: step === 0 ? "#cbd5e1" : "#0369a1",
               fontWeight: 600, cursor: step === 0 ? "not-allowed" : "pointer", fontSize: 14,
             }}>← {t.backBtn}</button>
+            <button onClick={saveProgress} style={{
+              padding: "8px 14px", borderRadius: 10, border: "1px solid #e0f2fe",
+              background: saved ? "#dcfce7" : "transparent", color: saved ? "#16a34a" : "#94a3b8",
+              fontSize: 12, cursor: "pointer", transition: "all 0.3s",
+            }}>💾 {saved ? t.saved : t.saveProgress}</button>
             <button onClick={next} disabled={!canNext} style={{
               padding: "10px 24px", borderRadius: 12, border: "none",
               background: canNext ? "linear-gradient(135deg,#38bdf8,#0369a1)" : "#e2e8f0",
@@ -797,6 +802,193 @@ function ResourcesPage({ t }) {
         </div>
       </GlassCard>
     </div>
+  );
+}
+
+// ─── CARTE SÉNÉGAL ────────────────────────────────────────────────────────────
+const SENEGAL_REGIONS = [
+  { name:"Saint-Louis", path:"M 0,0 L 255,0 L 255,128 L 155,140 L 80,140 L 30,115 L 0,75 Z", lx:110, ly:65 },
+  { name:"Louga",       path:"M 255,0 L 445,0 L 440,45 L 425,140 L 295,140 L 255,128 Z",      lx:340, ly:68 },
+  { name:"Matam",       path:"M 445,0 L 500,0 L 500,180 L 425,140 L 440,45 Z",                lx:466, ly:88 },
+  { name:"Dakar",       path:"M 0,165 L 35,155 L 50,175 L 38,207 L 0,212 Z",                  lx:18,  ly:186 },
+  { name:"Thiès",       path:"M 35,155 L 105,140 L 155,140 L 140,192 L 92,207 L 50,207 L 38,207 L 50,175 Z", lx:95, ly:172 },
+  { name:"Diourbel",    path:"M 155,140 L 255,128 L 255,142 L 245,207 L 175,222 L 140,192 Z", lx:197, ly:177 },
+  { name:"Fatick",      path:"M 92,207 L 140,192 L 175,222 L 160,257 L 98,267 L 68,242 L 75,217 Z", lx:115, ly:232 },
+  { name:"Kaolack",     path:"M 175,222 L 245,207 L 282,232 L 270,277 L 205,282 L 160,257 Z", lx:217, ly:247 },
+  { name:"Kaffrine",    path:"M 245,207 L 425,140 L 422,257 L 337,282 L 282,232 Z",           lx:340, ly:222 },
+  { name:"Tambacounda", path:"M 422,257 L 500,180 L 500,367 L 432,382 L 367,327 L 337,282 Z", lx:432, ly:295 },
+  { name:"Kédougou",    path:"M 432,382 L 500,367 L 500,400 L 432,400 Z",                     lx:462, ly:392 },
+  { name:"Kolda",       path:"M 270,277 L 337,282 L 367,327 L 352,372 L 282,377 L 247,337 L 247,307 Z", lx:307, ly:327 },
+  { name:"Sédhiou",     path:"M 160,257 L 205,282 L 247,307 L 247,337 L 197,362 L 140,347 L 120,307 Z", lx:187, ly:317 },
+  { name:"Ziguinchor",  path:"M 68,242 L 98,267 L 120,307 L 140,347 L 100,377 L 48,372 L 28,347 L 48,297 Z", lx:82, ly:327 },
+];
+
+function SenegalMap({ regionData, total }) {
+  const [hovered, setHovered] = useState(null);
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => { setTimeout(() => setAnimated(true), 300); }, []);
+
+  // Construire un dictionnaire count par région
+  const countMap = {};
+  regionData.forEach(r => { countMap[r.region] = r.count; });
+  const maxCount = Math.max(...regionData.map(r => r.count), 1);
+
+  const getColor = (name) => {
+    const count = countMap[name] || 0;
+    if (count === 0) return "#e0f2fe";
+    const intensity = count / maxCount;
+    if (intensity > 0.75) return "#0369a1";
+    if (intensity > 0.5)  return "#0ea5e9";
+    if (intensity > 0.25) return "#38bdf8";
+    return "#bfdbfe";
+  };
+
+  const getPct = (name) => {
+    const count = countMap[name] || 0;
+    return total > 0 ? Math.round((count / total) * 100) : 0;
+  };
+
+  const hov = hovered ? SENEGAL_REGIONS.find(r => r.name === hovered) : null;
+
+  return (
+    <GlassCard style={{ marginBottom: 20 }}>
+      <style>{`
+        .map-region { transition: all 0.4s cubic-bezier(.4,0,.2,1); cursor: pointer; }
+        .map-region:hover { filter: brightness(1.15) drop-shadow(0 4px 12px rgba(14,165,233,0.4)); }
+        @keyframes mapFadeIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+        .map-appear { animation: mapFadeIn 0.6s ease forwards; }
+        @keyframes pulse-dot { 0%,100%{r:5;opacity:1} 50%{r:8;opacity:0.7} }
+      `}</style>
+
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
+        <h3 style={{ fontWeight:700, color:"#0f172a", fontSize:15 }}>🗺️ Carte des régions — Sénégal</h3>
+        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          {[["#bfdbfe","Faible"],["#38bdf8","Moyen"],["#0ea5e9","Élevé"],["#0369a1","Très élevé"]].map(([color, label]) => (
+            <div key={label} style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <div style={{ width:12, height:12, borderRadius:3, background:color }}/>
+              <span style={{ fontSize:10, color:"#64748b" }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:16, alignItems:"start" }}>
+        {/* Carte SVG */}
+        <div style={{ position:"relative", width:"100%" }}>
+          <svg
+            viewBox="0 0 500 400"
+            style={{ width:"100%", maxWidth:500, height:"auto", filter:"drop-shadow(0 8px 24px rgba(14,165,233,0.15))" }}
+            className={animated ? "map-appear" : ""}
+          >
+            {/* Fond océan */}
+            <rect width="500" height="400" fill="#f0f9ff" rx="12"/>
+
+            {/* Gambie (bande blanche) */}
+            <path d="M 48,275 L 247,275 L 247,307 L 245,315 L 205,282 L 160,257 L 98,267 L 68,260 Z"
+              fill="white" opacity="0.7" stroke="#bfdbfe" strokeWidth="1"/>
+            <text x="148" y="292" fontSize="7" fill="#94a3b8" textAnchor="middle" fontWeight="600">GAMBIE</text>
+
+            {/* Régions */}
+            {SENEGAL_REGIONS.map((region, i) => {
+              const count = countMap[region.name] || 0;
+              const pct = getPct(region.name);
+              const isHov = hovered === region.name;
+              return (
+                <g key={region.name}
+                  onMouseEnter={() => setHovered(region.name)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => setHovered(isHov ? null : region.name)}
+                  className="map-region"
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                >
+                  <path
+                    d={region.path}
+                    fill={getColor(region.name)}
+                    stroke="white"
+                    strokeWidth={isHov ? "2.5" : "1.5"}
+                    strokeLinejoin="round"
+                    opacity={animated ? 1 : 0}
+                    style={{
+                      transition: `fill 0.3s ease, stroke-width 0.2s ease`,
+                      filter: isHov ? "brightness(1.1)" : "none",
+                    }}
+                  />
+                  {/* Point animé si données */}
+                  {count > 0 && (
+                    <circle cx={region.lx} cy={region.ly - 14} r="5" fill="white" opacity="0.9"
+                      style={{ animation: "pulse-dot 2s ease infinite" }}/>
+                  )}
+                  {/* Label région */}
+                  <text
+                    x={region.lx} y={region.ly}
+                    textAnchor="middle" fontSize={region.name.length > 10 ? "7" : "8"}
+                    fontWeight="700" fill={countMap[region.name] > 0 ? "white" : "#64748b"}
+                    style={{ pointerEvents:"none", userSelect:"none" }}
+                  >
+                    {region.name}
+                  </text>
+                  {/* Pourcentage */}
+                  {pct > 0 && (
+                    <text x={region.lx} y={region.ly + 11} textAnchor="middle" fontSize="8"
+                      fontWeight="800" fill="white" opacity="0.95" style={{ pointerEvents:"none" }}>
+                      {pct}%
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Trait côtier décoratif */}
+            <path d="M 0,0 L 0,75 L 30,115 L 0,165 L 0,212 L 0,400" stroke="#bfdbfe" strokeWidth="2" fill="none" opacity="0.5"/>
+          </svg>
+
+          {/* Tooltip hover */}
+          {hov && (
+            <div style={{
+              position:"absolute", top:8, left:8,
+              background:"rgba(255,255,255,0.97)", backdropFilter:"blur(12px)",
+              borderRadius:14, padding:"12px 16px", boxShadow:"0 8px 24px rgba(14,165,233,0.2)",
+              border:"1px solid #e0f2fe", minWidth:160, zIndex:10,
+              animation:"mapFadeIn 0.2s ease",
+            }}>
+              <div style={{ fontWeight:800, fontSize:14, color:"#0f172a", marginBottom:6 }}>{hov.name}</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
+                  <span style={{ fontSize:12, color:"#64748b" }}>Soumissions</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#0ea5e9" }}>{countMap[hov.name] || 0}</span>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", gap:16 }}>
+                  <span style={{ fontSize:12, color:"#64748b" }}>Pourcentage</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#0369a1" }}>{getPct(hov.name)}%</span>
+                </div>
+                <div style={{ marginTop:6, background:"#e0f2fe", borderRadius:99, height:6, overflow:"hidden" }}>
+                  <div style={{ width:`${getPct(hov.name)}%`, height:"100%", background:"linear-gradient(90deg,#38bdf8,#0369a1)", borderRadius:99, transition:"width 0.5s ease" }}/>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Classement régions */}
+        <div style={{ minWidth:160, maxWidth:200 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:"#0369a1", marginBottom:10 }}>🏆 Top régions</div>
+          {regionData.length === 0 ? (
+            <div style={{ fontSize:12, color:"#94a3b8" }}>Aucune donnée</div>
+          ) : regionData.slice(0, 8).map((r, i) => (
+            <div key={r.region} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+              <div style={{ width:20, height:20, borderRadius:6, background:i===0?"linear-gradient(135deg,#fbbf24,#f59e0b)":i===1?"linear-gradient(135deg,#94a3b8,#64748b)":i===2?"linear-gradient(135deg,#cd7c5a,#b45309)":"#e0f2fe", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:800, color:i<3?"white":"#0369a1", flexShrink:0 }}>
+                {i+1}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#0f172a", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.region}</div>
+                <div style={{ fontSize:10, color:"#94a3b8" }}>{r.count} · {Math.round((r.count/total)*100)}%</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </GlassCard>
   );
 }
 
@@ -1113,6 +1305,9 @@ function AdminPage({ t }) {
               </GlassCard>
             )}
           </div>
+
+          {/* Carte du Sénégal */}
+          <SenegalMap regionData={regionData} total={total} />
 
           {/* Tableau des dernières entrées */}
           <GlassCard style={{ marginBottom: 20 }}>
