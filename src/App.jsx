@@ -657,11 +657,6 @@ function QuestionnairePage({ setPage, t, addHistory }) {
               background: "transparent", color: step === 0 ? "#cbd5e1" : "#0369a1",
               fontWeight: 600, cursor: step === 0 ? "not-allowed" : "pointer", fontSize: 14,
             }}>← {t.backBtn}</button>
-            <button onClick={saveProgress} style={{
-              padding: "8px 14px", borderRadius: 10, border: "1px solid #e0f2fe",
-              background: saved ? "#dcfce7" : "transparent", color: saved ? "#16a34a" : "#94a3b8",
-              fontSize: 12, cursor: "pointer", transition: "all 0.3s",
-            }}>💾 {saved ? t.saved : t.saveProgress}</button>
             <button onClick={next} disabled={!canNext} style={{
               padding: "10px 24px", borderRadius: 12, border: "none",
               background: canNext ? "linear-gradient(135deg,#38bdf8,#0369a1)" : "#e2e8f0",
