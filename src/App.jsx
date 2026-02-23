@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from './supabaseClient';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { supabase } from './supabaseClient';
 
 // ─── TRANSLATIONS ────────────────────────────────────────────────────────────
 const T = {
@@ -168,41 +168,7 @@ const T = {
   }
 };
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-const mockHistory = [
-  { id: 1, date: "2024-01-15", age: "18-25 ans", region: "Dakar", substance: "Cannabis / Yamba" },
-  { id: 2, date: "2024-02-20", age: "18-25 ans", region: "Dakar", substance: "Alcool" },
-];
-const ageData = [
-  { name: "< 18", value: 12 },
-  { name: "18-25", value: 45 },
-  { name: "26-35", value: 28 },
-  { name: "36-45", value: 10 },
-  { name: "> 45", value: 5 },
-];
-const substanceData = [
-  { name: "Cannabis", value: 42 },
-  { name: "Alcool", value: 35 },
-  { name: "Tabac", value: 28 },
-  { name: "Médicaments", value: 15 },
-  { name: "Cocaïne", value: 8 },
-  { name: "Autres", value: 6 },
-];
-const regionData = [
-  { region: "Dakar", count: 89 },
-  { region: "Thiès", count: 34 },
-  { region: "Saint-Louis", count: 22 },
-  { region: "Ziguinchor", count: 18 },
-  { region: "Kaolack", count: 15 },
-];
-const trendData = [
-  { month: "Jan", submissions: 12 },
-  { month: "Fév", submissions: 19 },
-  { month: "Mar", submissions: 24 },
-  { month: "Avr", submissions: 31 },
-  { month: "Mai", submissions: 28 },
-  { month: "Jun", submissions: 42 },
-];
+// ─── MOCK DATA (supprimées - données réelles depuis Supabase) ─────────────────
 const centers = [
   { name: "CILD - Comité Interministériel de Lutte contre la Drogue", city: "Dakar", region: "Dakar", phone: "+221 33 849 00 00", address: "Dakar, Sénégal" },
   { name: "Centre de Santé Mentale de Fann", city: "Dakar", region: "Dakar", phone: "+221 33 824 55 54", address: "Hôpital de Fann, Dakar" },
@@ -769,8 +735,108 @@ function ResourcesPage({ t }) {
 }
 
 // ─── ADMIN DASHBOARD ──────────────────────────────────────────────────────────
-function AdminPage({ t, history }) {
-  const total = 234 + history.length;
+function AdminPage({ t }) {
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Charger toutes les soumissions depuis Supabase
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("submissions")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data) setSubmissions(data);
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  // Calculer les statistiques depuis les vraies données
+  const total = submissions.length;
+
+  const thisMonth = submissions.filter(s => {
+    const d = new Date(s.created_at);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  const uniqueRegions = [...new Set(submissions.map(s => s.region).filter(Boolean))];
+  const uniqueSubstances = [...new Set(submissions.flatMap(s => s.substances || []).filter(Boolean))];
+
+  // Données pour graphique par âge
+  const ageCount = {};
+  submissions.forEach(s => { if (s.age_range) ageCount[s.age_range] = (ageCount[s.age_range] || 0) + 1; });
+  const ageData = Object.entries(ageCount).map(([name, value]) => ({ name, value }));
+
+  // Données pour graphique par substance
+  const substanceCount = {};
+  submissions.forEach(s => (s.substances || []).forEach(sub => {
+    substanceCount[sub] = (substanceCount[sub] || 0) + 1;
+  }));
+  const substanceData = Object.entries(substanceCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, value]) => ({ name, value }));
+
+  // Données pour graphique par région
+  const regionCount = {};
+  submissions.forEach(s => { if (s.region) regionCount[s.region] = (regionCount[s.region] || 0) + 1; });
+  const regionData = Object.entries(regionCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 7)
+    .map(([region, count]) => ({ region, count }));
+
+  // Données pour graphique des tendances par mois
+  const monthCount = {};
+  const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+  submissions.forEach(s => {
+    const d = new Date(s.created_at);
+    const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    monthCount[key] = (monthCount[key] || 0) + 1;
+  });
+  const trendData = Object.entries(monthCount)
+    .slice(-6)
+    .map(([month, submissions]) => ({ month, submissions }));
+
+  // Export CSV
+  const exportCSV = () => {
+    const headers = ["Date", "Tranche d'âge", "Région", "Genre", "Substances", "Fréquence", "Mode", "Raisons", "Effets", "Durée", "Lieu", "Accès soins", "Arrêter"];
+    const rows = submissions.map(s => [
+      new Date(s.created_at).toLocaleDateString("fr-FR"),
+      s.age_range || "",
+      s.region || "",
+      s.gender || "",
+      (s.substances || []).join(" | "),
+      s.frequency || "",
+      (s.consumption_mode || []).join(" | "),
+      (s.reasons || []).join(" | "),
+      (s.effects || []).join(" | "),
+      s.duration || "",
+      s.place || "",
+      s.health_access || "",
+      s.stop_intention || "",
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `droguecollect_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
+
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ width: 48, height: 48, border: "4px solid #e0f2fe", borderTopColor: "#0ea5e9", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <p style={{ color: "#94a3b8", fontWeight: 600 }}>Chargement des données...</p>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ padding: "90px 20px 40px", maxWidth: 1000, margin: "0 auto" }}>
       <div style={{ marginBottom: 28 }}>
@@ -778,86 +844,170 @@ function AdminPage({ t, history }) {
         <p style={{ color: "#94a3b8" }}>{t.adminSub}</p>
       </div>
 
+      {/* Statistiques globales */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 16, marginBottom: 28 }}>
         {[
           { label: t.totalSubmissions, value: total, icon: "📋", color: "#0ea5e9" },
-          { label: t.thisMonth, value: 42, icon: "📅", color: "#8b5cf6" },
-          { label: t.regions_stat, value: 12, icon: "🗺️", color: "#10b981" },
-          { label: t.substances_stat, value: 9, icon: "🧪", color: "#f59e0b" },
+          { label: t.thisMonth, value: thisMonth, icon: "📅", color: "#8b5cf6" },
+          { label: t.regions_stat, value: uniqueRegions.length, icon: "🗺️", color: "#10b981" },
+          { label: t.substances_stat, value: uniqueSubstances.length, icon: "🧪", color: "#f59e0b" },
         ].map((s, i) => (
           <GlassCard key={i} style={{ textAlign: "center", padding: "20px 14px" }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.value}</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>{s.label}</div>
           </GlassCard>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20, marginBottom: 20 }}>
-        <GlassCard>
-          <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.ageDistrib}</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={ageData} barSize={28}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e0f2fe" }} />
-              <Bar dataKey="value" fill="#0ea5e9" radius={[6, 6, 0, 0]}>
-                {ageData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+      {total === 0 ? (
+        <GlassCard style={{ textAlign: "center", padding: 60 }}>
+          <div style={{ fontSize: 52, marginBottom: 16 }}>📭</div>
+          <h3 style={{ fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Aucune soumission pour l'instant</h3>
+          <p style={{ color: "#94a3b8" }}>Les données apparaîtront ici dès qu'un utilisateur soumettra le questionnaire.</p>
         </GlassCard>
+      ) : (
+        <>
+          {/* Graphiques */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20, marginBottom: 20 }}>
+            {ageData.length > 0 && (
+              <GlassCard>
+                <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.ageDistrib}</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={ageData} barSize={28}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e0f2fe" }} />
+                    <Bar dataKey="value" fill="#0ea5e9" radius={[6, 6, 0, 0]}>
+                      {ageData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            )}
 
-        <GlassCard>
-          <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.substanceDistrib}</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={substanceData} cx="50%" cy="50%" outerRadius={75} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
-                {substanceData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip contentStyle={{ borderRadius: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </GlassCard>
-      </div>
+            {substanceData.length > 0 && (
+              <GlassCard>
+                <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.substanceDistrib}</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={substanceData} cx="50%" cy="50%" outerRadius={75} dataKey="value"
+                      label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+                      {substanceData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12 }} formatter={(val, name) => [val, name]} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            )}
+          </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20 }}>
-        <GlassCard>
-          <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.trendsTitle}</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e0f2fe" }} />
-              <Line type="monotone" dataKey="submissions" stroke="#0ea5e9" strokeWidth={2.5} dot={{ fill: "#0ea5e9", r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </GlassCard>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 20, marginBottom: 20 }}>
+            {trendData.length > 0 && (
+              <GlassCard>
+                <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.trendsTitle}</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e0f2fe" }} />
+                    <Line type="monotone" dataKey="submissions" stroke="#0ea5e9" strokeWidth={2.5} dot={{ fill: "#0ea5e9", r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            )}
 
-        <GlassCard>
-          <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.regionDistrib}</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={regionData} layout="vertical" barSize={18}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="region" tick={{ fontSize: 11 }} width={70} />
-              <Tooltip contentStyle={{ borderRadius: 12 }} />
-              <Bar dataKey="count" fill="#38bdf8" radius={[0, 6, 6, 0]}>
-                {regionData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </GlassCard>
-      </div>
+            {regionData.length > 0 && (
+              <GlassCard>
+                <h3 style={{ fontWeight: 700, marginBottom: 16, color: "#0f172a", fontSize: 14 }}>{t.regionDistrib}</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={regionData} layout="vertical" barSize={18}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="region" tick={{ fontSize: 11 }} width={80} />
+                    <Tooltip contentStyle={{ borderRadius: 12 }} />
+                    <Bar dataKey="count" fill="#38bdf8" radius={[0, 6, 6, 0]}>
+                      {regionData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            )}
+          </div>
 
-      <div style={{ marginTop: 20, textAlign: "right" }}>
-        <button style={{
+          {/* Tableau des dernières entrées */}
+          <GlassCard style={{ marginBottom: 20 }}>
+            <h3 style={{ fontWeight: 700, color: "#0f172a", marginBottom: 16, fontSize: 15 }}>
+              📋 Dernières soumissions ({total})
+            </h3>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #e0f2fe" }}>
+                    {["Date", "Tranche d'âge", "Région", "Substances", "Fréquence", "Veut arrêter"].map(h => (
+                      <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#0369a1", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissions.slice(0, 20).map((s, i) => (
+                    <tr key={s.id} style={{ borderBottom: "1px solid #f0f9ff", background: i % 2 === 0 ? "rgba(240,249,255,0.5)" : "transparent" }}>
+                      <td style={{ padding: "10px 12px", color: "#64748b", whiteSpace: "nowrap" }}>
+                        {new Date(s.created_at).toLocaleDateString("fr-FR")}
+                      </td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <span style={{ padding: "2px 8px", borderRadius: 99, background: "#e0f2fe", color: "#0369a1", fontSize: 12, fontWeight: 600 }}>
+                          {s.age_range || "—"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "#475569" }}>{s.region || "—"}</td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {(s.substances || []).slice(0, 2).map((sub, j) => (
+                            <span key={j} style={{ padding: "2px 8px", borderRadius: 99, background: "#fef3c7", color: "#d97706", fontSize: 11, fontWeight: 600 }}>
+                              {sub}
+                            </span>
+                          ))}
+                          {(s.substances || []).length > 2 && (
+                            <span style={{ fontSize: 11, color: "#94a3b8" }}>+{s.substances.length - 2}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "#475569", fontSize: 12 }}>{s.frequency || "—"}</td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <span style={{
+                          padding: "2px 10px", borderRadius: 99, fontSize: 12, fontWeight: 600,
+                          background: s.stop_intention?.includes("arrêter") ? "#dcfce7" : "#fee2e2",
+                          color: s.stop_intention?.includes("arrêter") ? "#16a34a" : "#dc2626",
+                        }}>
+                          {s.stop_intention || "—"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {total > 20 && (
+                <p style={{ textAlign: "center", color: "#94a3b8", fontSize: 13, marginTop: 12 }}>
+                  Affichage des 20 dernières sur {total} soumissions — exportez le CSV pour tout voir
+                </p>
+              )}
+            </div>
+          </GlassCard>
+        </>
+      )}
+
+      {/* Bouton export CSV */}
+      <div style={{ textAlign: "right" }}>
+        <button onClick={exportCSV} disabled={total === 0} style={{
           padding: "11px 22px", borderRadius: 12, border: "none",
-          background: "linear-gradient(135deg,#38bdf8,#0369a1)",
-          color: "white", fontWeight: 700, cursor: "pointer",
-          boxShadow: "0 4px 16px rgba(14,165,233,0.3)", fontSize: 14,
+          background: total === 0 ? "#e2e8f0" : "linear-gradient(135deg,#38bdf8,#0369a1)",
+          color: total === 0 ? "#94a3b8" : "white",
+          fontWeight: 700, cursor: total === 0 ? "not-allowed" : "pointer",
+          boxShadow: total === 0 ? "none" : "0 4px 16px rgba(14,165,233,0.3)", fontSize: 14,
         }}>⬇️ {t.exportCSV}</button>
       </div>
     </div>
@@ -869,11 +1019,10 @@ export default function DrogueCollect() {
   const [lang, setLang] = useState("fr");
   const [page, setPage] = useState("home");
   const [user, setUser] = useState(null);
-  const [history, setHistory] = useState(mockHistory);
+  const [history, setHistory] = useState([]);
   const t = T[lang];
 
   const addHistory = async (answers) => {
-    // Envoyer les données à Supabase
     const { error } = await supabase
       .from("submissions")
       .insert({
@@ -897,7 +1046,6 @@ export default function DrogueCollect() {
       console.log("Données envoyées avec succès !");
     }
 
-    // Mettre à jour l'affichage local
     setHistory(prev => [{
       ...answers,
       date: new Date().toLocaleDateString("fr-FR"),
@@ -915,7 +1063,7 @@ export default function DrogueCollect() {
         {page === "questionnaire" && <QuestionnairePage setPage={setPage} t={t} addHistory={addHistory} />}
         {page === "history" && <HistoryPage t={t} history={history} />}
         {page === "resources" && <ResourcesPage t={t} />}
-        {page === "admin" && <AdminPage t={t} history={history} />}
+        {page === "admin" && <AdminPage t={t} />}
       </div>
     </div>
   );
