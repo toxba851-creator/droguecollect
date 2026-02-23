@@ -453,7 +453,7 @@ function HomePage({ setPage, t }) {
         <p style={{ fontSize: "clamp(1rem,2vw,1.15rem)", color: "#64748b", lineHeight: 1.7, marginBottom: 10 }}>{t.subtitle}</p>
       </div>
 
-      <div className={`fade-up ${vis ? "vis" : ""}`} className="mobile-col" style={{ transitionDelay: "0.25s", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 28, marginBottom: 16, width: "100%", maxWidth: 400 }}>
+      <div className={`fade-up ${vis ? "vis" : ""} mobile-col`} style={{ transitionDelay: "0.25s", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 28, marginBottom: 16, width: "100%", maxWidth: 400 }}>
         <button onClick={() => setPage("auth")} className="liquid-btn" style={{
           padding: "14px 36px", borderRadius: 16, border: "none", cursor: "pointer",
           background: "linear-gradient(135deg,#38bdf8,#0369a1)",
@@ -471,7 +471,7 @@ function HomePage({ setPage, t }) {
         <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>🔒 {t.privacyNote}</p>
       </div>
 
-      <div className={`fade-up ${vis ? "vis" : ""}`} className="mobile-grid-2" style={{ transitionDelay: "0.55s", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 36, width: "100%", maxWidth: 700 }}>
+      <div className={`fade-up ${vis ? "vis" : ""} mobile-grid-2`} style={{ transitionDelay: "0.55s", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 36, width: "100%", maxWidth: 700 }}>
         {[
           { icon: "🔒", label: "100% Anonyme", sub: "Aucune donnée identifiable" },
           { icon: "📊", label: "Impact Réel", sub: "Contribuez à la recherche" },
