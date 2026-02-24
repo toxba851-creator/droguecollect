@@ -306,10 +306,12 @@ function Nav({ page, setPage, user, setUser, lang, setLang, t }) {
         .desktop-nav { display: flex !important; }
         .hamburger-btns { display: none !important; }
         .bottom-nav { display: none !important; }
+        .footer-desktop { display: block !important; }
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .hamburger-btns { display: flex !important; }
           .bottom-nav { display: flex !important; }
+          .footer-desktop { display: none !important; }
         }
       `}</style>
 
@@ -384,22 +386,28 @@ function Nav({ page, setPage, user, setUser, lang, setLang, t }) {
         WebkitBackdropFilter: "blur(20px)",
         borderTop: "1px solid rgba(14,165,233,0.15)",
         boxShadow: "0 -4px 20px rgba(14,165,233,0.1)",
-        height: 68, alignItems: "center", justifyContent: "space-around",
+        flexDirection: "column", alignItems: "center",
         paddingBottom: "env(safe-area-inset-bottom)",
       }}>
-        {navItems.map(item => (
-          <button key={item.key} onClick={() => setPage(item.key)} style={{
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-            padding: "6px 8px", borderRadius: 12, border: "none", cursor: "pointer",
-            background: page === item.key ? "linear-gradient(135deg,#e0f2fe,#bfdbfe)" : "transparent",
-            color: page === item.key ? "#0369a1" : "#94a3b8",
-            fontWeight: page === item.key ? 700 : 500,
-            transition: "all 0.2s", minWidth: 52, flex: 1,
-          }}>
-            <span style={{ fontSize: 22 }}>{item.icon}</span>
-            <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>{item.label}</span>
-          </button>
-        ))}
+        <div style={{ display: "flex", width: "100%", height: 68, alignItems: "center", justifyContent: "space-around" }}>
+          {navItems.map(item => (
+            <button key={item.key} onClick={() => setPage(item.key)} style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              padding: "6px 8px", borderRadius: 12, border: "none", cursor: "pointer",
+              background: page === item.key ? "linear-gradient(135deg,#e0f2fe,#bfdbfe)" : "transparent",
+              color: page === item.key ? "#0369a1" : "#94a3b8",
+              fontWeight: page === item.key ? 700 : 500,
+              transition: "all 0.2s", minWidth: 52, flex: 1,
+            }}>
+              <span style={{ fontSize: 22 }}>{item.icon}</span>
+              <span style={{ fontSize: 10, whiteSpace: "nowrap" }}>{item.label}</span>
+            </button>
+          ))}
+        </div>
+        {/* Copyright mobile */}
+        <div style={{ fontSize: 10, color: "#94a3b8", paddingBottom: 6, textAlign: "center" }}>
+          © {new Date().getFullYear()} — Propulsé par le <strong style={{ color: "#0369a1" }}>CILD</strong> · Ministère de l'Intérieur
+        </div>
       </div>
     </>
   );
@@ -1538,6 +1546,23 @@ export default function DrogueCollect() {
         {page === "resources" && <ResourcesPage t={t} />}
         {page === "admin" && <AdminPage t={t} />}
       </div>
+
+      {/* ─── FOOTER desktop uniquement ────────────────────────────────── */}
+      <footer className="footer-desktop" style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+        textAlign: "center", padding: "10px 20px",
+        borderTop: "1px solid rgba(14,165,233,0.2)",
+        background: "rgba(255,255,255,0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}>
+        <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+          © {new Date().getFullYear()} — Propulsé par le{" "}
+          <span style={{ fontWeight: 700, color: "#0369a1" }}>CILD</span>
+          {" "}· Ministère de l'Intérieur
+        </p>
+      </footer>
+
     </div>
   );
 }
