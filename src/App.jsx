@@ -377,6 +377,16 @@ function Nav({ page, setPage, user, setUser, lang, setLang, t }) {
             }}>{t.login}</button>
           )}
         </div>
+        {/* Copyright desktop — visible seulement sur grand écran */}
+        <div className="footer-desktop" style={{
+          fontSize: 10, color: "#94a3b8", textAlign: "center",
+          position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)",
+          whiteSpace: "nowrap", pointerEvents: "none",
+        }}>
+          © {new Date().getFullYear()} — Propulsé par le{" "}
+          <strong style={{ color: "#0369a1" }}>CILD</strong>
+          {" "}· Ministère de l'Intérieur
+        </div>
       </nav>
 
       {/* ── Barre de navigation en bas — mobile uniquement ── */}
@@ -1547,21 +1557,7 @@ export default function DrogueCollect() {
         {page === "admin" && <AdminPage t={t} />}
       </div>
 
-      {/* ─── FOOTER desktop uniquement ────────────────────────────────── */}
-      <footer className="footer-desktop" style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
-        textAlign: "center", padding: "10px 20px",
-        borderTop: "1px solid rgba(14,165,233,0.2)",
-        background: "rgba(255,255,255,0.85)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-      }}>
-        <p style={{ margin: 0, fontSize: 11, color: "#64748b", fontWeight: 500 }}>
-          © {new Date().getFullYear()} — Propulsé par le{" "}
-          <span style={{ fontWeight: 700, color: "#0369a1" }}>CILD</span>
-          {" "}· Ministère de l'Intérieur
-        </p>
-      </footer>
+
 
     </div>
   );
