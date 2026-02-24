@@ -4,9 +4,36 @@ import { supabase } from './supabaseClient';
 import emailjs from '@emailjs/browser';
 
 // ─── EMAILJS CONFIG ───────────────────────────────────────────────────────────
-const EMAILJS_SERVICE  = 'service_euqbqsg';
-const EMAILJS_TEMPLATE = 'template_74j0hhg';
-const EMAILJS_KEY      = 'SOv-Z1lbJvOU85lI5';
+// ⚠️ Ces valeurs doivent être dans votre .env : VITE_EMAILJS_SERVICE, VITE_EMAILJS_TEMPLATE, VITE_EMAILJS_KEY
+const EMAILJS_SERVICE  = import.meta.env.VITE_EMAILJS_SERVICE  || 'service_euqbqsg';
+const EMAILJS_TEMPLATE = import.meta.env.VITE_EMAILJS_TEMPLATE || 'template_74j0hhg';
+const EMAILJS_KEY      = import.meta.env.VITE_EMAILJS_KEY      || 'SOv-Z1lbJvOU85lI5';
+
+// ─── SÉCURITÉ ADMIN ───────────────────────────────────────────────────────────
+// Hash SHA-256 du mot de passe admin (ne jamais mettre le mot de passe en clair ici)
+// Mot de passe actuel : DrogueCollect@2026!  → changez-le et recalculez le hash
+const ADMIN_HASH = "58428096a5e937f0f380e290d19e93d7e7ae17c6102b3acd00977a8a65258b0a";
+
+async function hashCode(code) {
+  const msgBuffer = new TextEncoder().encode(code);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ─── ANTI-SPAM ────────────────────────────────────────────────────────────────
+const SPAM_KEY     = "droguecollect_last_submit";
+const COOLDOWN_MS  = 30 * 60 * 1000; // 30 minutes entre deux soumissions
+
+function canSubmit() {
+  const last = localStorage.getItem(SPAM_KEY);
+  if (!last) return true;
+  return Date.now() - parseInt(last) > COOLDOWN_MS;
+}
+
+function recordSubmit() {
+  localStorage.setItem(SPAM_KEY, String(Date.now()));
+}
 
 // ─── TRANSLATIONS ────────────────────────────────────────────────────────────
 const T = {
@@ -468,10 +495,22 @@ function AuthPage({ setPage, setUser, t }) {
   const [adminCode, setAdminCode] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const handle = () => {
-    if (isAdmin && adminCode === "admin123") {
-      setUser({ pseudo: "Admin", role: "admin" });
-      setPage("admin");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  const handle = async () => {
+    if (isAdmin) {
+      if (!adminCode.trim()) { setAdminError("Veuillez saisir le code d\'accès."); return; }
+      setAdminLoading(true);
+      const inputHash = await hashCode(adminCode);
+      setAdminLoading(false);
+      if (inputHash === ADMIN_HASH) {
+        setAdminError("");
+        setUser({ pseudo: "Admin", role: "admin" });
+        setPage("admin");
+      } else {
+        setAdminError("❌ Code incorrect. Accès refusé.");
+      }
     } else if (pseudo.trim()) {
       setUser({ pseudo: pseudo.trim(), role: "user" });
       setPage("questionnaire");
@@ -501,17 +540,19 @@ function AuthPage({ setPage, setUser, t }) {
         ) : (
           <>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 6 }}>{t.adminCode}</label>
-            <input type="password" value={adminCode} onChange={e => setAdminCode(e.target.value)} placeholder="••••••••"
-              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "2px solid #e0f2fe", fontSize: 14, outline: "none", marginBottom: 20, background: "rgba(255,255,255,0.9)", color: "#0f172a", boxSizing: "border-box" }} />
+            <input type="password" value={adminCode} onChange={e => { setAdminCode(e.target.value); setAdminError(""); }} placeholder="••••••••"
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `2px solid ${adminError ? "#fca5a5" : "#e0f2fe"}`, fontSize: 14, outline: "none", marginBottom: 8, background: "rgba(255,255,255,0.9)", color: "#0f172a", boxSizing: "border-box" }} />
+            {adminError && <p style={{ color: "#ef4444", fontSize: 13, marginBottom: 12, fontWeight: 600 }}>{adminError}</p>}
+            {!adminError && <div style={{ marginBottom: 12 }} />}
           </>
         )}
 
-        <button onClick={handle} style={{
+        <button onClick={handle} disabled={adminLoading} style={{
           width: "100%", padding: "13px", borderRadius: 14, border: "none",
-          background: "linear-gradient(135deg,#38bdf8,#0369a1)",
-          color: "white", fontWeight: 700, fontSize: 15, cursor: "pointer",
+          background: adminLoading ? "#94a3b8" : "linear-gradient(135deg,#38bdf8,#0369a1)",
+          color: "white", fontWeight: 700, fontSize: 15, cursor: adminLoading ? "not-allowed" : "pointer",
           boxShadow: "0 6px 20px rgba(14,165,233,0.35)", marginBottom: 14,
-        }}>{t.continueBtn}</button>
+        }}>{adminLoading ? "Vérification..." : t.continueBtn}</button>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
           <button onClick={() => setIsAdmin(!isAdmin)} style={{ background: "none", border: "none", color: "#0ea5e9", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
@@ -1418,6 +1459,13 @@ export default function DrogueCollect() {
   const t = T[lang];
 
   const addHistory = async (answers) => {
+    // ─── Anti-spam : 1 soumission max toutes les 30 minutes ───────────────
+    if (!canSubmit()) {
+      alert("⏳ Vous avez déjà soumis un questionnaire récemment. Veuillez attendre 30 minutes avant de soumettre à nouveau.");
+      return;
+    }
+    recordSubmit();
+
     const { error } = await supabase
       .from("submissions")
       .insert({
