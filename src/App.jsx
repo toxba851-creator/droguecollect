@@ -4,7 +4,7 @@ import { supabase } from './supabaseClient';
 import emailjs from '@emailjs/browser';
 
 // ─── EMAILJS CONFIG ───────────────────────────────────────────────────────────
-const EMAILJS_SERVICE  = 'service_1srkbnk';
+const EMAILJS_SERVICE  = 'service_euqbqsg';
 const EMAILJS_TEMPLATE = 'template_74j0hhg';
 const EMAILJS_KEY      = 'SOv-Z1lbJvOU85lI5';
 
