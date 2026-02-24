@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { supabase } from './supabaseClient';
+import emailjs from '@emailjs/browser';
+
+// ─── EMAILJS CONFIG ───────────────────────────────────────────────────────────
+const EMAILJS_SERVICE  = 'service_1srkbnk';
+const EMAILJS_TEMPLATE = 'template_74j0hhg';
+const EMAILJS_KEY      = 'SOv-Z1lbJvOU85lI5';
 
 // ─── TRANSLATIONS ────────────────────────────────────────────────────────────
 const T = {
@@ -498,7 +504,7 @@ function AuthPage({ setPage, setUser, t }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const handle = () => {
-    if (isAdmin && adminCode === "Malation12@") {
+    if (isAdmin && adminCode === "admin123") {
       setUser({ pseudo: "Admin", role: "admin" });
       setPage("admin");
     } else if (pseudo.trim()) {
@@ -657,7 +663,11 @@ function QuestionnairePage({ setPage, t, addHistory }) {
               background: "transparent", color: step === 0 ? "#cbd5e1" : "#0369a1",
               fontWeight: 600, cursor: step === 0 ? "not-allowed" : "pointer", fontSize: 14,
             }}>← {t.backBtn}</button>
-            
+            <button onClick={saveProgress} style={{
+              padding: "8px 14px", borderRadius: 10, border: "1px solid #e0f2fe",
+              background: saved ? "#dcfce7" : "transparent", color: saved ? "#16a34a" : "#94a3b8",
+              fontSize: 12, cursor: "pointer", transition: "all 0.3s",
+            }}>💾 {saved ? t.saved : t.saveProgress}</button>
             <button onClick={next} disabled={!canNext} style={{
               padding: "10px 24px", borderRadius: 12, border: "none",
               background: canNext ? "linear-gradient(135deg,#38bdf8,#0369a1)" : "#e2e8f0",
@@ -1466,6 +1476,24 @@ export default function DrogueCollect() {
       console.error("Erreur envoi données:", error);
     } else {
       console.log("Données envoyées avec succès !");
+      // ─── Envoyer la notification email ───────────────────────────────────
+      try {
+        const now = new Date();
+        await emailjs.send(
+          EMAILJS_SERVICE,
+          EMAILJS_TEMPLATE,
+          {
+            region:     answers.region     || "Non renseignée",
+            age:        answers.age        || "Non renseigné",
+            substances: (answers.substances || []).join(", ") || "Non renseignées",
+            date:       now.toLocaleDateString("fr-FR") + " à " + now.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" }),
+          },
+          EMAILJS_KEY
+        );
+        console.log("Email de notification envoyé !");
+      } catch (emailErr) {
+        console.warn("Email non envoyé :", emailErr);
+      }
     }
 
     setHistory(prev => [{
