@@ -185,52 +185,19 @@ const centers = [
 ];
 const COLORS = ["#0ea5e9", "#38bdf8", "#7dd3fc", "#0284c7", "#0369a1", "#075985"];
 
-// ─── LIQUID BLOB BACKGROUND ───────────────────────────────────────────────────
+// ─── BACKGROUND LÉGER ─────────────────────────────────────────────────────────
 function LiquidBlobs() {
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
-      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <filter id="blur1"><feGaussianBlur stdDeviation="60" /></filter>
-          <filter id="blur2"><feGaussianBlur stdDeviation="80" /></filter>
-          <filter id="blur3"><feGaussianBlur stdDeviation="50" /></filter>
-        </defs>
-        <g filter="url(#blur1)">
-          <ellipse className="blob1" cx="200" cy="200" rx="300" ry="250" fill="#bfdbfe" opacity="0.5" />
-        </g>
-        <g filter="url(#blur2)">
-          <ellipse className="blob2" cx="1200" cy="600" rx="350" ry="300" fill="#93c5fd" opacity="0.4" />
-        </g>
-        <g filter="url(#blur3)">
-          <ellipse className="blob3" cx="720" cy="450" rx="280" ry="220" fill="#60a5fa" opacity="0.3" />
-        </g>
-        <g filter="url(#blur1)">
-          <ellipse className="blob4" cx="1100" cy="100" rx="200" ry="180" fill="#dbeafe" opacity="0.5" />
-        </g>
-      </svg>
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+      background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 40%, #f8fafc 70%, #eff6ff 100%)",
+    }}>
+      <div style={{ position:"absolute", top:"-10%", left:"-5%", width:500, height:500, borderRadius:"50%", background:"radial-gradient(circle, rgba(147,197,253,0.35) 0%, transparent 70%)", willChange:"transform", animation:"blobA 20s ease-in-out infinite" }}/>
+      <div style={{ position:"absolute", bottom:"-10%", right:"-5%", width:600, height:600, borderRadius:"50%", background:"radial-gradient(circle, rgba(96,165,250,0.25) 0%, transparent 70%)", willChange:"transform", animation:"blobB 25s ease-in-out infinite" }}/>
+      <div style={{ position:"absolute", top:"40%", left:"45%", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle, rgba(186,230,253,0.2) 0%, transparent 70%)", willChange:"transform", animation:"blobA 18s ease-in-out infinite reverse" }}/>
       <style>{`
-        .blob1 { animation: float1 12s ease-in-out infinite; }
-        .blob2 { animation: float2 15s ease-in-out infinite; }
-        .blob3 { animation: float3 10s ease-in-out infinite; }
-        .blob4 { animation: float4 18s ease-in-out infinite; }
-        @keyframes float1 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          33% { transform: translate(60px,40px) scale(1.1); }
-          66% { transform: translate(-40px,60px) scale(0.95); }
-        }
-        @keyframes float2 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          50% { transform: translate(-80px,-50px) scale(1.15); }
-        }
-        @keyframes float3 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          25% { transform: translate(50px,-30px) scale(1.05); }
-          75% { transform: translate(-50px,40px) scale(0.9); }
-        }
-        @keyframes float4 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          60% { transform: translate(40px,60px) scale(1.2); }
-        }
+        @keyframes blobA { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+        @keyframes blobB { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-40px,-30px)} }
       `}</style>
     </div>
   );
@@ -256,12 +223,12 @@ function ProgressBar({ current, total }) {
 function GlassCard({ children, style = {}, onClick, className = "" }) {
   return (
     <div onClick={onClick} className={`glass-card ${className}`} style={{
-      background: "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
+      background: "rgba(255,255,255,0.88)",
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
       borderRadius: 24,
-      border: "1px solid rgba(255,255,255,0.85)",
-      boxShadow: "0 8px 32px rgba(14,165,233,0.10), 0 2px 8px rgba(0,0,0,0.06)",
+      border: "1px solid rgba(255,255,255,0.9)",
+      boxShadow: "0 4px 16px rgba(14,165,233,0.08), 0 1px 4px rgba(0,0,0,0.04)",
       padding: 28,
       ...style
     }}>
@@ -277,12 +244,12 @@ function Choice({ label, selected, onClick, multi }) {
       display: "inline-flex", alignItems: "center", gap: 8,
       padding: "10px 18px", borderRadius: 14, margin: "5px 4px",
       border: selected ? "2px solid #0ea5e9" : "2px solid #e0f2fe",
-      background: selected ? "linear-gradient(135deg,#e0f2fe,#bfdbfe)" : "rgba(255,255,255,0.8)",
+      background: selected ? "linear-gradient(135deg,#e0f2fe,#bfdbfe)" : "rgba(255,255,255,0.9)",
       color: selected ? "#0369a1" : "#475569",
       fontWeight: selected ? 700 : 500, cursor: "pointer",
-      fontSize: 14, transition: "all 0.2s cubic-bezier(.4,0,.2,1)",
-      boxShadow: selected ? "0 4px 16px rgba(14,165,233,0.25)" : "none",
-      transform: selected ? "scale(1.03)" : "scale(1)",
+      fontSize: 14,
+      transition: "border-color 0.15s ease, background 0.15s ease, color 0.15s ease",
+      boxShadow: selected ? "0 2px 8px rgba(14,165,233,0.2)" : "none",
     }}>
       {multi && <span style={{
         width: 18, height: 18, borderRadius: 5, border: `2px solid ${selected ? "#0ea5e9" : "#94a3b8"}`,
@@ -582,7 +549,8 @@ function QuestionnairePage({ setPage, t, addHistory }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [done, setDone] = useState(false);
-  const [saved, setSaved] = useState(false);
+
+
   const [geoAsked, setGeoAsked] = useState(false);
 
   const cur = steps[step];
@@ -606,7 +574,8 @@ function QuestionnairePage({ setPage, t, addHistory }) {
     }
   };
   const back = () => step > 0 && setStep(step - 1);
-  const saveProgress = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
+
+
 
   if (geoAsked && !done) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "80px 20px 40px" }}>
@@ -663,11 +632,7 @@ function QuestionnairePage({ setPage, t, addHistory }) {
               background: "transparent", color: step === 0 ? "#cbd5e1" : "#0369a1",
               fontWeight: 600, cursor: step === 0 ? "not-allowed" : "pointer", fontSize: 14,
             }}>← {t.backBtn}</button>
-            <button onClick={saveProgress} style={{
-              padding: "8px 14px", borderRadius: 10, border: "1px solid #e0f2fe",
-              background: saved ? "#dcfce7" : "transparent", color: saved ? "#16a34a" : "#94a3b8",
-              fontSize: 12, cursor: "pointer", transition: "all 0.3s",
-            }}>💾 {saved ? t.saved : t.saveProgress}</button>
+
             <button onClick={next} disabled={!canNext} style={{
               padding: "10px 24px", borderRadius: 12, border: "none",
               background: canNext ? "linear-gradient(135deg,#38bdf8,#0369a1)" : "#e2e8f0",
@@ -1506,9 +1471,15 @@ export default function DrogueCollect() {
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 40%,#dbeafe 100%)", position: "relative", WebkitTextSizeAdjust: "100%" }}>
       <style>{`
+        *, *::before, *::after { box-sizing: border-box; }
+        body { -webkit-text-size-adjust: 100%; text-rendering: optimizeSpeed; }
+        .glass-card { will-change: auto; contain: layout style; }
+        button { -webkit-tap-highlight-color: transparent; }
         @media (max-width: 768px) {
           .glass-card { border-radius: 18px !important; padding: 18px 16px !important; }
-          body { -webkit-text-size-adjust: 100%; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
       `}</style>
       <LiquidBlobs />
