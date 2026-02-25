@@ -291,31 +291,6 @@ function Choice({ label, selected, onClick, multi }) {
 }
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────
-// ─── FOOTER ───────────────────────────────────────────────────────────────────
-function Footer() {
-  return (
-    <div style={{
-      textAlign: "center",
-      padding: "20px 20px 90px 20px",
-      marginTop: 20,
-    }}>
-      <div style={{
-        display: "inline-block",
-        background: "rgba(255,255,255,0.8)",
-        border: "1px solid rgba(14,165,233,0.2)",
-        borderRadius: 12,
-        padding: "10px 24px",
-        fontSize: 12,
-        color: "#64748b",
-      }}>
-        © {new Date().getFullYear()} — Propulsé par le{" "}
-        <strong style={{ color: "#0369a1" }}>CILD</strong>
-        {" · "}Ministère de l'Intérieur
-      </div>
-    </div>
-  );
-}
-
 function Nav({ page, setPage, user, setUser, lang, setLang, t }) {
   const navItems = [
     { key: "home", label: t.home, icon: "🏠" },
@@ -403,6 +378,14 @@ function Nav({ page, setPage, user, setUser, lang, setLang, t }) {
           )}
         </div>
 
+        {/* Copyright desktop — en bas de la barre */}
+        <div className="desktop-nav" style={{
+          position: "absolute", bottom: 0, left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap",
+        }}>
+          © {new Date().getFullYear()} · <strong style={{ color: "#0369a1" }}>CILD</strong> · Ministère de l'Intérieur
+        </div>
       </nav>
 
       {/* ── Barre de navigation en bas — mobile uniquement ── */}
@@ -430,31 +413,16 @@ function Nav({ page, setPage, user, setUser, lang, setLang, t }) {
             </button>
           ))}
         </div>
-
+        {/* Copyright visible dans la barre mobile */}
+        <div style={{ fontSize: 10, color: "#94a3b8", paddingBottom: 6, textAlign: "center", width: "100%" }}>
+          © {new Date().getFullYear()} · <strong style={{ color: "#0369a1" }}>CILD</strong> · Ministère de l'Intérieur
+        </div>
       </div>
     </>
   );
 }
 
 
-// ─── FOOTER ───────────────────────────────────────────────────────────────────
-function Footer() {
-  return (
-    <div style={{
-      textAlign: "center",
-      padding: "16px 20px",
-      marginTop: 20,
-      borderTop: "1px solid #e0f2fe",
-      background: "rgba(255,255,255,0.7)",
-    }}>
-      <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
-        © {new Date().getFullYear()} — Propulsé par le{" "}
-        <strong style={{ color: "#0369a1" }}>CILD</strong>
-        {" "}· Ministère de l'Intérieur
-      </p>
-    </div>
-  );
-}
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
 function HomePage({ setPage, t }) {
@@ -534,7 +502,6 @@ function HomePage({ setPage, t }) {
           </GlassCard>
         ))}
       </div>
-      <Footer />
     </div>
   );
 }
@@ -786,7 +753,6 @@ function HistoryPage({ t, history }) {
           </ResponsiveContainer>
         </GlassCard>
       )}
-      <Footer />
     </div>
   );
 }
@@ -864,7 +830,6 @@ function ResourcesPage({ t }) {
           ))}
         </div>
       </GlassCard>
-      <Footer />
     </div>
   );
 }
@@ -1480,7 +1445,6 @@ function AdminPage({ t }) {
         </button>
         {total === 0 && <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>Aucune donnée à exporter pour l'instant.</p>}
       </div>
-      <Footer />
     </div>
   );
 }
@@ -1593,7 +1557,6 @@ export default function DrogueCollect() {
         {page === "resources" && <ResourcesPage t={t} />}
         {page === "admin" && <AdminPage t={t} />}
       </div>
-      <Footer />
     </div>
   );
 }
