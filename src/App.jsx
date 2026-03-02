@@ -1570,6 +1570,36 @@ export default function DrogueCollect() {
           *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
 
+        /* ── FOOTER ──────────────────────────────────────────── */
+        .app-footer {
+          position: fixed;
+          bottom: 0; left: 0; right: 0;
+          z-index: 200;
+          text-align: center;
+          padding: 8px 16px;
+          font-size: 11px;
+          font-weight: 500;
+          background: rgba(255,255,255,0.92);
+          border-top: 1px solid rgba(14,165,233,0.15);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          color: #64748b;
+        }
+        body.dark .app-footer {
+          background: rgba(15,23,42,0.95) !important;
+          border-top-color: rgba(71,85,105,0.4) !important;
+          color: #94a3b8 !important;
+        }
+        /* Éviter que le contenu soit caché derrière le footer */
+        @media (min-width: 769px) {
+          .app-footer { bottom: 0; }
+        }
+        @media (max-width: 768px) {
+          /* Sur mobile la bottom-nav est à z-index 100, le footer est à 200 */
+          /* On le cache sur mobile car la bottom-nav prend déjà cette place */
+          .app-footer { display: none; }
+        }
+
         /* ── MODE SOMBRE ─────────────────────────────────────── */
         body.dark {
           background: #0f172a !important;
@@ -1614,6 +1644,12 @@ export default function DrogueCollect() {
         {page === "resources" && <ResourcesPage t={t} />}
         {page === "admin" && <AdminPage t={t} />}
       </div>
+
+      {/* ── FOOTER ── */}
+      <div className="app-footer">
+        © {new Date().getFullYear()} &nbsp;·&nbsp; <strong style={{ color: "#0369a1" }}>CILD</strong> &nbsp;·&nbsp; Ministère de l'Intérieur
+      </div>
+
     </div>
   );
 }
